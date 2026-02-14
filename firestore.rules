@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isRoomParticipant(roomId) {
+      return isAuthed() &&
+        exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.auth.uid));
+    }
+
+    function isHost(roomId) {
+      return isAuthed() &&
+        get(/databases/$(database)/documents/rooms/$(roomId)).data.hostUid == request.auth.uid;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if isAuthed() && request.resource.data.hostUid == request.auth.uid;
+      allow update: if isHost(roomId);
+
+      match /players/{uid} {
+        allow read: if isRoomParticipant(roomId);
+        allow create, update: if isAuthed() && request.auth.uid == uid;
+      }
+    }
+  }
+}
