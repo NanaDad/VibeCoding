@@ -1,0 +1,96 @@
+{
+  "name": "windows-jp-ko-realtime-translator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform Japanese to Korean subtitle translator with provider selection for Codex auth, Gemini API, ChatGPT API, and DeepL fallback",
+  "type": "module",
+  "main": "dist-electron/main/main.js",
+  "scripts": {
+    "dev:renderer": "vite",
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.node.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "verify:runtime": "npm run build:main && node dist-electron/verify-runtime.js",
+    "verify:runtime:report": "npm run build:main && node dist-electron/verify-runtime.js --report-file artifacts/runtime-verify-latest.json",
+    "prepare:stt:mac": "node scripts/prepare-distil-faster-whisper.mjs",
+    "prepare:ffmpeg:windows": "node scripts/prepare-ffmpeg.mjs",
+    "start": "electron dist-electron/main/main.js",
+    "pack:windows:portable": "npm run prepare:ffmpeg:windows && npm run build && electron-builder --win portable --config.win.signAndEditExecutable=false",
+    "pack:windows:exe-bundle": "npm run prepare:ffmpeg:windows && npm run build && electron-builder --win dir --x64 --config.win.signAndEditExecutable=false && node scripts/package-windows-exe-bundle.mjs",
+    "release:windows": "npm run pack:windows:exe-bundle && node scripts/create-release.mjs --legacy-source",
+    "release:windows-portable": "npm run pack:windows:portable",
+    "release:windows-legacy-source": "npm run build && node scripts/create-release.mjs --legacy-source",
+    "release:windows-debug": "npm run release:windows-legacy-source"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^36.2.0",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.mingu.jpkotranslator",
+    "productName": "JP-KO Translator",
+    "artifactName": "JP-KO-Translator-${version}-${env.RELEASE_STAMP}-windows-portable.${ext}",
+    "directories": {
+      "output": "release/electron-builder"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/bin/win32/x64",
+        "to": "b/wx",
+        "filter": [
+          "ffmpeg.exe",
+          "whisper-cli.exe",
+          "stream.exe",
+          "ggml-base.bin",
+          "SDL2.dll",
+          "whisper.dll"
+        ]
+      }
+    ],
+    "asar": true,
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Japanese audio input is captured only to transcribe and translate it into Korean subtitles in real time."
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "JP-KO-Translator-${version}-${env.RELEASE_STAMP}-windows-portable.${ext}"
+    },
+    "extraMetadata": {
+      "main": "dist-electron/main/main.js"
+    }
+  }
+}
